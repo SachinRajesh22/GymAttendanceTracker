@@ -490,18 +490,56 @@ select,
     grid-template-columns: 1fr;
   }
 
-  .weekdays,
-  .calendar-grid {
-    gap: 0.35rem;
+  .weekdays {
+    display: none;
   }
 
-  .calendar-spacer,
+  .calendar-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .calendar-spacer {
+    display: none;
+  }
+
   .day-cell {
-    min-height: 112px;
-    padding: 0.5rem;
+    aspect-ratio: auto;
+    min-height: auto;
+    padding: 0.8rem;
+    gap: 0.7rem;
+    border-radius: 1.1rem;
+  }
+
+  .day-top {
+    align-items: center;
+  }
+
+  .day-number {
+    font-size: 1.35rem;
+  }
+
+  .day-name {
+    font-size: 0.86rem;
   }
 
   .status-row {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .status-toggle {
+    min-height: 44px;
+    font-size: 0.84rem;
+  }
+
+  .protein-input {
+    min-height: 44px;
+  }
+
+  .status-note {
+    min-height: 0;
+    font-size: 0.82rem;
   }
 }
