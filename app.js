@@ -14,6 +14,17 @@ const MONTH_NAMES = [
   "December",
 ];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WORKOUT_OPTIONS = [
+  "full-body",
+  "chest",
+  "biceps",
+  "triceps",
+  "back",
+  "abs",
+  "leg",
+  "shoulder",
+  "cardio",
+];
 
 const page = document.body.dataset.page;
 let state = loadState();
@@ -188,6 +199,17 @@ function createDayCell(year, monthIndex, day) {
         placeholder="120g"
         value="${entry.proteinText || ""}"
       />
+      <label for="workout-${dateKey}">Workout</label>
+      <select id="workout-${dateKey}" class="workout-select">
+        <option value="">Select workout</option>
+        ${WORKOUT_OPTIONS.map(
+          (option) => `
+            <option value="${option}" ${entry.workoutType === option ? "selected" : ""}>
+              ${formatWorkoutLabel(option)}
+            </option>
+          `
+        ).join("")}
+      </select>
     </div>
 
     <div class="status-note">${statusNote(effectiveStatus)}</div>
@@ -224,6 +246,15 @@ function createDayCell(year, monthIndex, day) {
     refreshCurrentPage();
   });
 
+  cell.querySelector(".workout-select").addEventListener("change", (event) => {
+    const current = getEntry(year, dateKey);
+    setEntry(year, dateKey, {
+      ...current,
+      workoutType: event.target.value,
+    });
+    refreshCurrentPage();
+  });
+
   return cell;
 }
 
@@ -234,6 +265,7 @@ function initDashboardPage() {
     consistencyStats: document.querySelector("#consistencyStats"),
     nutritionStats: document.querySelector("#nutritionStats"),
     bestMonthStats: document.querySelector("#bestMonthStats"),
+    workoutSplitStats: document.querySelector("#workoutSplitStats"),
   };
 
   renderYearOptions(elements.yearSelect);
@@ -284,6 +316,10 @@ function renderDashboardPage(elements) {
     detailRow("Best protein month", metrics.bestProteinMonth),
     detailRow("Year selected", year),
   ].join("");
+
+  elements.workoutSplitStats.innerHTML = WORKOUT_OPTIONS.map((option) =>
+    detailRow(formatWorkoutLabel(option), metrics.workoutCounts[option] || 0)
+  ).join("");
 }
 
 function changeMonth(step) {
@@ -335,6 +371,7 @@ function getEntry(year, dateKey) {
   return getYearData(year)[dateKey] || {
     status: "unmarked",
     proteinText: "",
+    workoutType: "",
   };
 }
 
@@ -342,9 +379,14 @@ function setEntry(year, dateKey, entry) {
   const cleanEntry = {
     status: entry.status || "unmarked",
     proteinText: sanitizeProteinText(entry.proteinText || ""),
+    workoutType: sanitizeWorkoutType(entry.workoutType || ""),
   };
 
-  if (cleanEntry.status === "unmarked" && cleanEntry.proteinText === "") {
+  if (
+    cleanEntry.status === "unmarked" &&
+    cleanEntry.proteinText === "" &&
+    cleanEntry.workoutType === ""
+  ) {
     delete getYearData(year)[dateKey];
   } else {
     getYearData(year)[dateKey] = cleanEntry;
@@ -373,6 +415,7 @@ function computeMonthMetrics(year, monthIndex) {
   let sundayDays = 0;
   let proteinLoggedDays = 0;
   let totalProtein = 0;
+  const workoutCounts = createWorkoutCounts();
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = formatDateKey(year, monthIndex, day);
@@ -389,6 +432,10 @@ function computeMonthMetrics(year, monthIndex) {
       proteinLoggedDays += 1;
       totalProtein += proteinNumber;
     }
+
+    if (status === "present" && entry.workoutType) {
+      workoutCounts[entry.workoutType] += 1;
+    }
   }
 
   const trackedDays = presentDays + absentDays;
@@ -399,6 +446,7 @@ function computeMonthMetrics(year, monthIndex) {
     sundayDays,
     proteinLoggedDays,
     totalProtein,
+    workoutCounts,
     trackedDays,
     attendanceRate: trackedDays === 0 ? 0 : round((presentDays / trackedDays) * 100),
     averageProteinPerLoggedDay:
@@ -421,6 +469,13 @@ function computeYearMetrics(year) {
   const totalProtein = sumBy(monthMetrics, "totalProtein");
   const trackedDays = presentDays + absentDays;
   const unmarkedDays = totalDaysInYear - presentDays - absentDays - holidayDays - sundayDays;
+  const workoutCounts = createWorkoutCounts();
+
+  monthMetrics.forEach((month) => {
+    WORKOUT_OPTIONS.forEach((option) => {
+      workoutCounts[option] += month.workoutCounts[option] || 0;
+    });
+  });
 
   const bestAttendance = [...monthMetrics].sort((a, b) => b.presentDays - a.presentDays)[0];
   const lowestAbsence = [...monthMetrics].sort((a, b) => a.absentDays - b.absentDays)[0];
@@ -440,6 +495,7 @@ function computeYearMetrics(year) {
     averageProteinPerLoggedDay:
       proteinLoggedDays === 0 ? 0 : round(totalProtein / proteinLoggedDays),
     averageProteinPerMonth: round(totalProtein / 12),
+    workoutCounts,
     bestProteinDayLabel: findBestProteinDay(year),
     bestAttendanceMonth: `${bestAttendance.monthName} (${bestAttendance.presentDays} present)`,
     lowestAbsenceMonth: `${lowestAbsence.monthName} (${lowestAbsence.absentDays} absent)`,
@@ -549,6 +605,10 @@ function sanitizeProteinText(value) {
   return value.trim().slice(0, 12);
 }
 
+function sanitizeWorkoutType(value) {
+  return WORKOUT_OPTIONS.includes(value) ? value : "";
+}
+
 function parseProtein(value) {
   if (!value) {
     return null;
@@ -584,4 +644,18 @@ function round(value) {
 
 function sumBy(items, key) {
   return items.reduce((sum, item) => sum + item[key], 0);
+}
+
+function formatWorkoutLabel(value) {
+  return value
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function createWorkoutCounts() {
+  return WORKOUT_OPTIONS.reduce((counts, option) => {
+    counts[option] = 0;
+    return counts;
+  }, {});
 }
