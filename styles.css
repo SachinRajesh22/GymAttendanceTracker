@@ -187,13 +187,15 @@ select,
 .ghost-button,
 .danger-button,
 .status-toggle,
-.protein-input {
+.protein-input,
+.workout-select {
   border: 1px solid var(--line);
   border-radius: 0.9rem;
 }
 
 select,
-.protein-input {
+.protein-input,
+.workout-select {
   background: rgba(255, 255, 255, 0.9);
   padding: 0.78rem 0.85rem;
 }
@@ -379,6 +381,11 @@ select,
   color: var(--muted);
 }
 
+.workout-select {
+  width: 100%;
+  color: var(--text);
+}
+
 .month-summary {
   display: grid;
   gap: 0.8rem;
@@ -535,6 +542,10 @@ select,
   }
 
   .protein-input {
+    min-height: 44px;
+  }
+
+  .workout-select {
     min-height: 44px;
   }
 
